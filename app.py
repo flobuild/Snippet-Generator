@@ -8,15 +8,6 @@ from bs4 import BeautifulSoup
 # Muss als erste Streamlit-Funktion kommen
 st.set_page_config(page_title="SEO Snippet Generator", layout="centered", page_icon="🛠", initial_sidebar_state="collapsed")
 
-# Hintergrund auf Weiß setzen
-st.markdown("""
-    <style>
-        .stApp {
-            background-color: white;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 # 🔒 Einfacher Passwortschutz mit Button und Ausblendung nach Login
 if 'access_granted' not in st.session_state:
     st.session_state.access_granted = False
