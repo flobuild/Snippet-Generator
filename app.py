@@ -4,7 +4,7 @@ import os
 import html
 
 # OpenAI API-Key setzen
-openai.api_key = st.secrets.get("openai_api_key", os.getenv("OPENAI_API_KEY"))
+client = openai.OpenAI(api_key=st.secrets.get("openai_api_key", os.getenv("OPENAI_API_KEY")))
 
 st.set_page_config(page_title="SEO Snippet Generator", layout="centered")
 st.title("🔧 SEO Titel- & Meta-Generator")
@@ -70,7 +70,7 @@ if st.button("🔎 Snippet generieren"):
     with st.spinner("GPT denkt nach..."):
         prompt = build_prompt(seitentyp, data)
         try:
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "system", "content": "Du bist ein SEO-Experte."},
@@ -86,7 +86,6 @@ if st.button("🔎 Snippet generieren"):
             st.markdown(f"**Meta Description (max 155 Zeichen):**\n\n{meta}")
             st.caption(f"🧮 Titel: {len(title)} Zeichen | Meta: {len(meta)} Zeichen")
 
-            # Vorschauformat je nach Ansicht
             preview_style = "max-width:600px;" if geräteansicht == "Mobil" else "max-width:750px;"
 
             st.markdown(f"""
