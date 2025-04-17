@@ -6,7 +6,16 @@ import requests
 from bs4 import BeautifulSoup
 
 # Muss als erste Streamlit-Funktion kommen
-st.set_page_config(page_title="SEO Snippet Generator", layout="centered")
+st.set_page_config(page_title="SEO Snippet Generator", layout="centered", page_icon="🛠", initial_sidebar_state="collapsed")
+
+# Hintergrund auf Weiß setzen
+st.markdown("""
+    <style>
+        .stApp {
+            background-color: white;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # 🔒 Einfacher Passwortschutz mit Button und Ausblendung nach Login
 if 'access_granted' not in st.session_state:
@@ -39,9 +48,20 @@ seitentyp = st.selectbox("Welchen Seitentyp möchtest Du optimieren?", [
 ])
 
 st.subheader("Inhaltliche Angaben")
-marke = st.text_input("Wie lautet der Marken- oder Shopname?")
-usps = st.text_input("Was ist Euer Alleinstellungsmerkmal?")
-branche = st.text_input("In welcher Branche seid Ihr tätig?")
+marke = st.text_input("Wie lautet der Marken- oder Shopname?", key="marke")
+usps = st.text_input("Was ist Euer Alleinstellungsmerkmal?", key="usps")
+branche = st.text_input("In welcher Branche seid Ihr tätig?", key="branche")
+
+# Weitere Felder dynamisch anzeigen je nach Seitentyp
+if seitentyp == "Produktseite":
+    st.text_input("Produktname", key="produktname")
+    st.text_area("Produktbeschreibung", key="beschreibung")
+elif seitentyp == "Blogartikel":
+    st.text_input("Artikelthema", key="artikelthema")
+    st.text_area("Kurze Zusammenfassung", key="zusammenfassung")
+elif seitentyp == "Landingpage":
+    st.text_input("Aktion oder Angebot", key="aktion")
+    st.text_input("Zielgruppe oder Kampagnenziel", key="ziel")
 
 st.subheader("Optional: Live-URL analysieren")
 url_input = st.text_input("Falls Du möchtest, analysieren wir automatisch die Inhalte einer URL.")
