@@ -59,7 +59,7 @@ elif seitentyp == "Kontaktseite":
 # GPT Prompt-Generator
 
 def build_prompt(seitentyp, inputs):
-    base = f"Du bist ein erfahrener SEO-Texter. Erstelle einen suchmaschinenoptimierten Title (max. 60 Zeichen) und eine Meta Description (max. 155 Zeichen) für eine {seitentyp}-Seite. Sprich die Nutzer mit Du/Dein an, fokussiere Dich auf Relevanz, Nutzen und klare Sprache."
+    base = f"Du bist ein erfahrener SEO-Texter. Erstelle einen suchmaschinenoptimierten Title (max. 60 Zeichen) und eine Meta Description (max. 155 Zeichen) für eine {seitentyp}-Seite. Sprich die Nutzer mit Du/Dein an, fokussiere Dich auf Relevanz, Nutzen und klare Sprache. Gib Deine Antwort bitte genau in folgendem Format zurück (keine zusätzlichen Erklärungen):\n\nTitle: ...\nMeta: ..."
     context = "".join([f"\n- {key}: {value}" for key, value in inputs.items() if value])
     return base + context
 
@@ -81,9 +81,9 @@ if st.button("Snippet generieren"):
             title = ""
             meta = ""
             for line in raw_output.split("\n"):
-                if "title:" in line.lower():
+                if line.lower().startswith("title:"):
                     title = line.split(":", 1)[1].strip()
-                elif "meta:" in line.lower():
+                elif line.lower().startswith("meta:"):
                     meta = line.split(":", 1)[1].strip()
 
             st.subheader("Vorschau Snippet")
@@ -92,14 +92,14 @@ if st.button("Snippet generieren"):
             st.caption(f"Titel: {len(title)} Zeichen | Meta: {len(meta)} Zeichen")
 
             for ansicht, style in {"Desktop": "max-width:750px;", "Mobil": "max-width:600px;"}.items():
-                st.markdown(f"### Vorschau ({ansicht})")
+                st.markdown(f"#### Vorschau {ansicht}")
                 st.markdown(f"""
                 <div style='border:1px solid #ddd; padding:16px; border-radius:8px; margin-top:12px; {style} background:#fff;'>
                     <p style='color:#202124; font-size:14px; margin-bottom:2px;'>
                         <span style='color:green;'>www.beispielseite.de/{seitentyp.lower().replace(' ', '-')}</span>
                     </p>
                     <p style='color:#1a0dab; font-size:18px; margin:0;'>
-                        {html.escape(title)}
+                        {html.escape(title) if title else '<em>Kein Titel erkannt</em>'}
                     </p>
                     <p style='color:#4d5156; font-size:14px; margin-top:4px;'>
                         {html.escape(meta) if meta else '<em>Keine Beschreibung erkannt</em>'}
