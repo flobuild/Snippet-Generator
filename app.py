@@ -2,12 +2,32 @@ import streamlit as st
 import openai
 import os
 import html
+import requests
+from bs4 import BeautifulSoup
 
 # OpenAI API-Key setzen
 client = openai.OpenAI(api_key=st.secrets.get("openai_api_key", os.getenv("OPENAI_API_KEY")))
 
 st.set_page_config(page_title="SEO Snippet Generator", layout="centered")
 st.title("SEO Titel- & Meta-Generator")
+
+st.subheader("Live-URL analysieren (optional)")
+url_input = st.text_input("Wenn Du willst, gib hier eine URL ein. Wir analysieren dann die Inhalte automatisch.")
+scraped_data = {}
+
+if url_input:
+    try:
+        response = requests.get(url_input, timeout=5)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        scraped_data['Marke'] = soup.title.string.strip() if soup.title else ""
+        meta_tag = soup.find("meta", attrs={"name": "description"})
+        scraped_data['Kernaussage'] = meta_tag['content'].strip() if meta_tag and 'content' in meta_tag.attrs else ""
+        h1 = soup.find("h1")
+        scraped_data['Thema'] = h1.get_text(strip=True) if h1 else ""
+        scraped_data['USP'] = soup.get_text()[:500].strip().replace("\n", " ")
+        st.success("Inhalte erfolgreich aus URL extrahiert.")
+    except Exception as e:
+        st.warning(f"Fehler beim Auslesen der Seite: {e}")
 
 seitentyp = st.selectbox("Welchen Seitentyp möchtest Du optimieren?", [
     "Startseite",
@@ -22,10 +42,10 @@ seitentyp = st.selectbox("Welchen Seitentyp möchtest Du optimieren?", [
 st.subheader("Inhaltliche Angaben")
 data = {}
 
-data['Marke'] = st.text_input("Wie lautet der Marken- oder Shopname?")
+data['Marke'] = st.text_input("Wie lautet der Marken- oder Shopname?", value=scraped_data.get('Marke', ""))
 
 if seitentyp == "Startseite":
-    data['USP'] = st.text_input("Was ist Euer Alleinstellungsmerkmal?")
+    data['USP'] = st.text_input("Was ist Euer Alleinstellungsmerkmal?", value=scraped_data.get('USP', ""))
     data['Branche'] = st.text_input("In welcher Branche seid Ihr tätig?")
 
 elif seitentyp == "Kategorieseite":
@@ -39,9 +59,9 @@ elif seitentyp == "Produktseite":
     data['Zielgruppe'] = st.text_input("Wer nutzt dieses Produkt typischerweise?")
 
 elif seitentyp == "Blogartikel":
-    data['Thema'] = st.text_input("Was ist das Thema des Artikels?")
+    data['Thema'] = st.text_input("Was ist das Thema des Artikels?", value=scraped_data.get('Thema', ""))
     data['Keyword'] = st.text_input("Was ist das Haupt-Keyword?")
-    data['Kernaussage'] = st.text_area("Was ist die zentrale Aussage?")
+    data['Kernaussage'] = st.text_area("Was ist die zentrale Aussage?", value=scraped_data.get('Kernaussage', ""))
 
 elif seitentyp == "Landingpage":
     data['Aktion'] = st.text_input("Welche Aktion wird beworben?")
