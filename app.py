@@ -5,6 +5,9 @@ import html
 import requests
 from bs4 import BeautifulSoup
 
+# Muss als erste Streamlit-Funktion kommen
+st.set_page_config(page_title="SEO Snippet Generator", layout="centered")
+
 # Passwortschutz über Streamlit Secrets
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
@@ -22,7 +25,6 @@ if not st.session_state["authenticated"]:
 # OpenAI API-Key setzen
 client = openai.OpenAI(api_key=st.secrets.get("openai_api_key", os.getenv("OPENAI_API_KEY")))
 
-st.set_page_config(page_title="SEO Snippet Generator", layout="centered")
 st.title("SEO Titel- & Meta-Generator")
 
 seitentyp = st.selectbox("Welchen Seitentyp möchtest Du optimieren?", [
