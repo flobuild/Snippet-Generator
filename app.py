@@ -11,23 +11,8 @@ client = openai.OpenAI(api_key=st.secrets.get("openai_api_key", os.getenv("OPENA
 st.set_page_config(page_title="SEO Snippet Generator", layout="centered")
 st.title("SEO Titel- & Meta-Generator")
 
-st.subheader("Live-URL analysieren (optional)")
-url_input = st.text_input("Wenn Du willst, gib hier eine URL ein. Wir analysieren dann die Inhalte automatisch.")
-scraped_data = {}
-
-if url_input:
-    try:
-        response = requests.get(url_input, timeout=5)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        scraped_data['Marke'] = soup.title.string.strip() if soup.title else ""
-        meta_tag = soup.find("meta", attrs={"name": "description"})
-        scraped_data['Kernaussage'] = meta_tag['content'].strip() if meta_tag and 'content' in meta_tag.attrs else ""
-        h1 = soup.find("h1")
-        scraped_data['Thema'] = h1.get_text(strip=True) if h1 else ""
-        scraped_data['USP'] = soup.get_text()[:500].strip().replace("\n", " ")
-        st.success("Inhalte erfolgreich aus URL extrahiert.")
-    except Exception as e:
-        st.warning(f"Fehler beim Auslesen der Seite: {e}")
+st.subheader("Live-URL analysieren")
+url_input = st.text_input("Gib eine URL ein. Wir analysieren den Inhalt automatisch und generieren direkt ein Snippet.")
 
 seitentyp = st.selectbox("Welchen Seitentyp möchtest Du optimieren?", [
     "Startseite",
@@ -39,98 +24,74 @@ seitentyp = st.selectbox("Welchen Seitentyp möchtest Du optimieren?", [
     "Kontaktseite"
 ])
 
-st.subheader("Inhaltliche Angaben")
-data = {}
+# Funktion zum Crawlen der Seite und Weitergabe an GPT
 
-data['Marke'] = st.text_input("Wie lautet der Marken- oder Shopname?", value=scraped_data.get('Marke', ""))
+def scrape_url_and_generate_prompt(url, seitentyp):
+    try:
+        response = requests.get(url, timeout=5)
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-if seitentyp == "Startseite":
-    data['USP'] = st.text_input("Was ist Euer Alleinstellungsmerkmal?", value=scraped_data.get('USP', ""))
-    data['Branche'] = st.text_input("In welcher Branche seid Ihr tätig?")
+        title_tag = soup.title.string.strip() if soup.title else ""
+        meta_tag = soup.find("meta", attrs={"name": "description"})
+        meta_desc = meta_tag['content'].strip() if meta_tag and 'content' in meta_tag.attrs else ""
+        h1 = soup.find("h1")
+        headline = h1.get_text(strip=True) if h1 else ""
+        text_body = soup.get_text(separator=' ', strip=True)
 
-elif seitentyp == "Kategorieseite":
-    data['Produktkategorie'] = st.text_input("Welche Produktkategorie wird dargestellt?")
-    data['Vorteile'] = st.text_area("Welche Vorteile bietet diese Kategorie?")
-    data['Zielgruppe'] = st.text_input("Für wen ist das Angebot gedacht?")
+        prompt = f"Du bist ein erfahrener SEO-Texter. Erstelle einen suchmaschinenoptimierten Title (max. 60 Zeichen) und eine Meta Description (max. 155 Zeichen) für eine {seitentyp}-Seite. Sprich die Nutzer mit Du/Dein an, fokussiere Dich auf Relevanz, Nutzen und klare Sprache. Der Titel soll am Ende folgenden Zusatz enthalten: | {title_tag}. Die Meta Description darf den Titel nicht wiederholen und soll neugierig machen. Gib Deine Antwort bitte genau in folgendem Format zurück (keine zusätzlichen Erklärungen):\n\nTitle: ...\nMeta: ...\n\nInhalt der Seite (nur zur Kontextbildung):\n- Titel: {title_tag}\n- Meta: {meta_desc}\n- H1: {headline}\n- Text: {text_body[:1000]}"
 
-elif seitentyp == "Produktseite":
-    data['Produktname'] = st.text_input("Wie heißt das Produkt?")
-    data['Features'] = st.text_area("Welche technischen Merkmale sind besonders?")
-    data['Zielgruppe'] = st.text_input("Wer nutzt dieses Produkt typischerweise?")
+        return prompt
+    except Exception as e:
+        st.error(f"Fehler beim Auslesen der Seite: {e}")
+        return None
 
-elif seitentyp == "Blogartikel":
-    data['Thema'] = st.text_input("Was ist das Thema des Artikels?", value=scraped_data.get('Thema', ""))
-    data['Keyword'] = st.text_input("Was ist das Haupt-Keyword?")
-    data['Kernaussage'] = st.text_area("Was ist die zentrale Aussage?", value=scraped_data.get('Kernaussage', ""))
+if url_input:
+    st.subheader("Snippet generieren")
+    with st.spinner("URL wird geladen und analysiert..."):
+        prompt = scrape_url_and_generate_prompt(url_input, seitentyp)
+        if prompt:
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4.1-mini",
+                    messages=[
+                        {"role": "system", "content": "Du bist ein SEO-Experte."},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                raw_output = response.choices[0].message.content.strip()
 
-elif seitentyp == "Landingpage":
-    data['Aktion'] = st.text_input("Welche Aktion wird beworben?")
-    data['Zielgruppe'] = st.text_input("Wen wollt Ihr ansprechen?")
-    data['Zeitraum'] = st.text_input("Gibt es eine zeitliche Begrenzung?")
+                # Versuche sauber Titel & Meta zu extrahieren
+                title = ""
+                meta = ""
+                for line in raw_output.split("\n"):
+                    if line.lower().startswith("title:"):
+                        title = line.split(":", 1)[1].strip()
+                    elif line.lower().startswith("meta:"):
+                        meta = line.split(":", 1)[1].strip()
 
-elif seitentyp == "Über uns / Team":
-    data['Unternehmen'] = st.text_input("Wie heißt das Unternehmen?")
-    data['Werte'] = st.text_area("Welche Werte/Philosophie lebt Ihr?")
-    data['Erfahrung'] = st.text_input("Wie viel Erfahrung bringt Ihr mit?")
+                st.subheader("Vorschau Snippet")
+                st.markdown(f"**Title (max 60 Zeichen):**\n\n{title}")
+                st.markdown(f"**Meta Description (max 155 Zeichen):**\n\n{meta if meta else '— Keine Meta Description erkannt —'}")
+                st.caption(f"Titel: {len(title)} Zeichen | Meta: {len(meta)} Zeichen")
 
-elif seitentyp == "Kontaktseite":
-    data['Kontaktoptionen'] = st.text_input("Welche Kontaktmöglichkeiten gibt es?")
-    data['Reaktionszeit'] = st.text_input("Wie schnell antwortet Ihr in der Regel?")
+                for ansicht, style in {"Desktop": "max-width:750px;", "Mobil": "max-width:600px;"}.items():
+                    st.markdown(f"#### Vorschau {ansicht}")
+                    st.markdown(f"""
+                    <div style='border:1px solid #ddd; padding:16px; border-radius:8px; margin-top:12px; {style} background:#fff;'>
+                        <p style='color:#202124; font-size:14px; margin-bottom:2px;'>
+                            <span style='color:green;'>{url_input}</span>
+                        </p>
+                        <p style='color:#1a0dab; font-size:18px; margin:0;'>
+                            {html.escape(title) if title else '<em>Kein Titel erkannt</em>'}
+                        </p>
+                        <p style='color:#4d5156; font-size:14px; margin-top:4px;'>
+                            {html.escape(meta) if meta else '<em>Keine Beschreibung erkannt</em>'}
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-# GPT Prompt-Generator
+                st.code(title, language='text')
+                st.code(meta, language='text')
 
-def build_prompt(seitentyp, inputs):
-    marke = inputs.get("Marke", "")
-    base = f"Du bist ein erfahrener SEO-Texter. Erstelle einen suchmaschinenoptimierten Title (max. 60 Zeichen) und eine Meta Description (max. 155 Zeichen) für eine {seitentyp}-Seite. Sprich die Nutzer mit Du/Dein an, fokussiere Dich auf Relevanz, Nutzen und klare Sprache. Der Titel soll am Ende folgendes enthalten: | {marke}. Die Meta Description darf die Marke NICHT enthalten. Gib Deine Antwort bitte genau in folgendem Format zurück (keine zusätzlichen Erklärungen):\n\nTitle: ...\nMeta: ..."
-    context = "".join([f"\n- {key}: {value}" for key, value in inputs.items() if key != "Marke" and value])
-    return base + context
-
-# Snippet generieren mit OpenAI
-if st.button("Snippet generieren"):
-    with st.spinner("GPT denkt nach..."):
-        prompt = build_prompt(seitentyp, data)
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4.1-mini",
-                messages=[
-                    {"role": "system", "content": "Du bist ein SEO-Experte."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            raw_output = response.choices[0].message.content.strip()
-
-            # Versuche sauber Titel & Meta zu extrahieren
-            title = ""
-            meta = ""
-            for line in raw_output.split("\n"):
-                if line.lower().startswith("title:"):
-                    title = line.split(":", 1)[1].strip()
-                elif line.lower().startswith("meta:"):
-                    meta = line.split(":", 1)[1].strip()
-
-            st.subheader("Vorschau Snippet")
-            st.markdown(f"**Title (max 60 Zeichen):**\n\n{title}")
-            st.markdown(f"**Meta Description (max 155 Zeichen):**\n\n{meta if meta else '— Keine Meta Description erkannt —'}")
-            st.caption(f"Titel: {len(title)} Zeichen | Meta: {len(meta)} Zeichen")
-
-            for ansicht, style in {"Desktop": "max-width:750px;", "Mobil": "max-width:600px;"}.items():
-                st.markdown(f"#### Vorschau {ansicht}")
-                st.markdown(f"""
-                <div style='border:1px solid #ddd; padding:16px; border-radius:8px; margin-top:12px; {style} background:#fff;'>
-                    <p style='color:#202124; font-size:14px; margin-bottom:2px;'>
-                        <span style='color:green;'>www.beispielseite.de/{seitentyp.lower().replace(' ', '-')}</span>
-                    </p>
-                    <p style='color:#1a0dab; font-size:18px; margin:0;'>
-                        {html.escape(title) if title else '<em>Kein Titel erkannt</em>'}
-                    </p>
-                    <p style='color:#4d5156; font-size:14px; margin-top:4px;'>
-                        {html.escape(meta) if meta else '<em>Keine Beschreibung erkannt</em>'}
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-
-            st.code(title, language='text')
-            st.code(meta, language='text')
-
-        except Exception as e:
-            st.error(f"Fehler bei der OpenAI-Abfrage: {e}")
+            except Exception as e:
+                st.error(f"Fehler bei der OpenAI-Abfrage: {e}")
