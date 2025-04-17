@@ -10,12 +10,15 @@ if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
 if not st.session_state["authenticated"]:
-    password = st.text_input("Passwort", type="password")
-    if password == st.secrets.get("app_password"):
-        st.session_state["authenticated"] = True
-        st.experimental_rerun()
-    else:
-        st.stop()
+    st.title("🔒 Zugriff nur mit Passwort")
+    password = st.text_input("Passwort eingeben", type="password")
+    if password:
+        if password == st.secrets.get("app_password"):
+            st.session_state["authenticated"] = True
+            st.success("Zugang erfolgreich.")
+        else:
+            st.error("Falsches Passwort.")
+    st.stop()
 
 # OpenAI API-Key setzen
 client = openai.OpenAI(api_key=st.secrets.get("openai_api_key", os.getenv("OPENAI_API_KEY")))
