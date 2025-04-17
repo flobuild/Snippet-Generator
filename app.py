@@ -8,19 +8,19 @@ from bs4 import BeautifulSoup
 # Muss als erste Streamlit-Funktion kommen
 st.set_page_config(page_title="SEO Snippet Generator", layout="centered")
 
-# Passwortschutz über Streamlit Secrets
-if "authenticated" not in st.session_state:
-    st.session_state["authenticated"] = False
+# 🔒 Einfacher Passwortschutz mit Button und Ausblendung nach Login
+if 'access_granted' not in st.session_state:
+    st.session_state.access_granted = False
 
-if not st.session_state["authenticated"]:
-    st.title("🔒 Zugriff nur mit Passwort")
-    password = st.text_input("Passwort eingeben", type="password")
-    if password:
+if not st.session_state.access_granted:
+    password = st.text_input("Zugangscode", type="password")
+    if st.button("Einloggen"):
         if password == st.secrets.get("app_password"):
-            st.session_state["authenticated"] = True
+            st.session_state.access_granted = True
+            st.experimental_rerun()
         else:
-            st.error("Falsches Passwort.")
-        st.stop()
+            st.warning("Zugriff verweigert. Bitte gültigen Code eingeben.")
+    st.stop()
 
 # OpenAI API-Key setzen
 client = openai.OpenAI(api_key=st.secrets.get("openai_api_key", os.getenv("OPENAI_API_KEY")))
