@@ -17,7 +17,8 @@ if not st.session_state.access_granted:
     if st.button("Einloggen"):
         if password == st.secrets.get("app_password"):
             st.session_state.access_granted = True
-            st.experimental_rerun()
+            st.success("Zugang erfolgreich. Die App ist jetzt freigeschaltet.")
+            st.stop()
         else:
             st.warning("Zugriff verweigert. Bitte gültigen Code eingeben.")
     st.stop()
