@@ -71,7 +71,7 @@ if st.button("🔎 Snippet generieren"):
         prompt = build_prompt(seitentyp, data)
         try:
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "Du bist ein SEO-Experte."},
                     {"role": "user", "content": prompt}
