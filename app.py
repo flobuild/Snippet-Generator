@@ -22,10 +22,11 @@ seitentyp = st.selectbox("Welchen Seitentyp möchtest Du optimieren?", [
 st.subheader("Inhaltliche Angaben")
 data = {}
 
+data['Marke'] = st.text_input("Wie lautet der Marken- oder Shopname?")
+
 if seitentyp == "Startseite":
     data['USP'] = st.text_input("Was ist Euer Alleinstellungsmerkmal?")
     data['Branche'] = st.text_input("In welcher Branche seid Ihr tätig?")
-    data['Marke'] = st.text_input("Wie lautet der Markenname?")
 
 elif seitentyp == "Kategorieseite":
     data['Produktkategorie'] = st.text_input("Welche Produktkategorie wird dargestellt?")
