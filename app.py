@@ -15,11 +15,8 @@ if not st.session_state["authenticated"]:
     if password:
         if password == st.secrets.get("app_password"):
             st.session_state["authenticated"] = True
-            st.experimental_rerun()
         else:
             st.error("Falsches Passwort.")
-            st.stop()
-    else:
         st.stop()
 
 # OpenAI API-Key setzen
