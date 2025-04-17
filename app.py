@@ -61,7 +61,7 @@ elif seitentyp == "Kontaktseite":
 
 def build_prompt(seitentyp, inputs):
     marke = inputs.get("Marke", "")
-    base = f"Du bist ein erfahrener SEO-Texter. Erstelle einen suchmaschinenoptimierten Title (max. 60 Zeichen) und eine Meta Description (max. 155 Zeichen) für eine {seitentyp}-Seite. Sprich die Nutzer mit Du/Dein an, fokussiere Dich auf Relevanz, Nutzen und klare Sprache. Der Titel soll am Ende folgendes enthalten: | {marke}. Gib Deine Antwort bitte genau in folgendem Format zurück (keine zusätzlichen Erklärungen):\n\nTitle: ...\nMeta: ..."
+    base = f"Du bist ein erfahrener SEO-Texter. Erstelle einen suchmaschinenoptimierten Title (max. 60 Zeichen) und eine Meta Description (max. 155 Zeichen) für eine {seitentyp}-Seite. Sprich die Nutzer mit Du/Dein an, fokussiere Dich auf Relevanz, Nutzen und klare Sprache. Der Titel soll am Ende folgendes enthalten: | {marke}. Die Meta Description darf die Marke NICHT enthalten. Gib Deine Antwort bitte genau in folgendem Format zurück (keine zusätzlichen Erklärungen):\n\nTitle: ...\nMeta: ..."
     context = "".join([f"\n- {key}: {value}" for key, value in inputs.items() if key != "Marke" and value])
     return base + context
 
