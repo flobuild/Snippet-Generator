@@ -40,19 +40,29 @@ seitentyp = st.selectbox("Welchen Seitentyp möchtest Du optimieren?", [
 
 st.subheader("Inhaltliche Angaben")
 marke = st.text_input("Wie lautet der Marken- oder Shopname?", key="marke")
-usps = st.text_input("Was ist Euer Alleinstellungsmerkmal?", key="usps")
 branche = st.text_input("In welcher Branche seid Ihr tätig?", key="branche")
 
 # Weitere Felder dynamisch anzeigen je nach Seitentyp
 if seitentyp == "Produktseite":
     st.text_input("Produktname", key="produktname")
     st.text_area("Produktbeschreibung", key="beschreibung")
+    st.text_input("Was ist Euer Alleinstellungsmerkmal?", key="usps")
 elif seitentyp == "Blogartikel":
     st.text_input("Artikelthema", key="artikelthema")
     st.text_area("Kurze Zusammenfassung", key="zusammenfassung")
 elif seitentyp == "Landingpage":
     st.text_input("Aktion oder Angebot", key="aktion")
     st.text_input("Zielgruppe oder Kampagnenziel", key="ziel")
+    st.text_input("Was ist Euer Alleinstellungsmerkmal?", key="usps")
+elif seitentyp == "Startseite":
+    st.text_input("Was ist Euer Alleinstellungsmerkmal?", key="usps")
+elif seitentyp == "Kategorieseite":
+    st.text_input("Was ist das Hauptthema oder Produktspektrum der Kategorie?", key="kategorie_thema")
+    st.text_input("Was ist Euer Alleinstellungsmerkmal?", key="usps")
+elif seitentyp == "Über uns / Team":
+    st.text_area("Was macht Euer Team oder Eure Unternehmenskultur besonders?", key="team_usps")
+elif seitentyp == "Kontaktseite":
+    st.text_input("Was erwartet Nutzer auf dieser Seite?", key="kontakt_zweck")
 
 st.subheader("Optional: Live-URL analysieren")
 url_input = st.text_input("Falls Du möchtest, analysieren wir automatisch die Inhalte einer URL.")
@@ -82,7 +92,7 @@ def scrape_url_and_generate_prompt(url, seitentyp):
 if url_input:
     prompt = scrape_url_and_generate_prompt(url_input, seitentyp)
 else:
-    prompt = f"Du bist ein erfahrener SEO-Texter. Erstelle einen suchmaschinenoptimierten Title (max. 60 Zeichen) und eine Meta Description (max. 155 Zeichen) für eine {seitentyp}-Seite. Sprich die Nutzer mit Du/Dein an, fokussiere Dich auf Relevanz, Nutzen und klare Sprache. Der Titel soll am Ende folgenden Zusatz enthalten: | {marke}. Die Meta Description darf die Marke NICHT enthalten. Gib Deine Antwort bitte genau in folgendem Format zurück (keine zusätzlichen Erklärungen):\n\nTitle: ...\nMeta: ...\n\nEingaben:\n- Marke: {marke}\n- USP: {usps}\n- Branche: {branche}"
+    prompt = f"Du bist ein erfahrener SEO-Texter. Erstelle einen suchmaschinenoptimierten Title (max. 60 Zeichen) und eine Meta Description (max. 155 Zeichen) für eine {seitentyp}-Seite. Sprich die Nutzer mit Du/Dein an, fokussiere Dich auf Relevanz, Nutzen und klare Sprache. Der Titel soll am Ende folgenden Zusatz enthalten: | {marke}. Die Meta Description darf die Marke NICHT enthalten. Gib Deine Antwort bitte genau in folgendem Format zurück (keine zusätzlichen Erklärungen):\n\nTitle: ...\nMeta: ...\n\nEingaben:\n- Marke: {marke}\n- USP: {st.session_state.get('usps', '')}\n- Branche: {branche}"
 
 if st.button("Snippet generieren"):
     with st.spinner("GPT denkt nach..."):
