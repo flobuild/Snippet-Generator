@@ -5,14 +5,23 @@ import html
 import requests
 from bs4 import BeautifulSoup
 
+# Passwortschutz über Streamlit Secrets
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+if not st.session_state["authenticated"]:
+    password = st.text_input("Passwort", type="password")
+    if password == st.secrets.get("app_password"):
+        st.session_state["authenticated"] = True
+        st.experimental_rerun()
+    else:
+        st.stop()
+
 # OpenAI API-Key setzen
 client = openai.OpenAI(api_key=st.secrets.get("openai_api_key", os.getenv("OPENAI_API_KEY")))
 
 st.set_page_config(page_title="SEO Snippet Generator", layout="centered")
 st.title("SEO Titel- & Meta-Generator")
-
-st.subheader("Live-URL analysieren")
-url_input = st.text_input("Gib eine URL ein. Wir analysieren den Inhalt automatisch und generieren direkt ein Snippet.")
 
 seitentyp = st.selectbox("Welchen Seitentyp möchtest Du optimieren?", [
     "Startseite",
@@ -23,6 +32,14 @@ seitentyp = st.selectbox("Welchen Seitentyp möchtest Du optimieren?", [
     "Über uns / Team",
     "Kontaktseite"
 ])
+
+st.subheader("Inhaltliche Angaben")
+marke = st.text_input("Wie lautet der Marken- oder Shopname?")
+usps = st.text_input("Was ist Euer Alleinstellungsmerkmal?")
+branche = st.text_input("In welcher Branche seid Ihr tätig?")
+
+st.subheader("Optional: Live-URL analysieren")
+url_input = st.text_input("Falls Du möchtest, analysieren wir automatisch die Inhalte einer URL.")
 
 # Funktion zum Crawlen der Seite und Weitergabe an GPT
 
@@ -45,53 +62,56 @@ def scrape_url_and_generate_prompt(url, seitentyp):
         st.error(f"Fehler beim Auslesen der Seite: {e}")
         return None
 
+# Prompt zusammenbauen
 if url_input:
-    st.subheader("Snippet generieren")
-    with st.spinner("URL wird geladen und analysiert..."):
-        prompt = scrape_url_and_generate_prompt(url_input, seitentyp)
-        if prompt:
-            try:
-                response = client.chat.completions.create(
-                    model="gpt-4.1-mini",
-                    messages=[
-                        {"role": "system", "content": "Du bist ein SEO-Experte."},
-                        {"role": "user", "content": prompt}
-                    ]
-                )
-                raw_output = response.choices[0].message.content.strip()
+    prompt = scrape_url_and_generate_prompt(url_input, seitentyp)
+else:
+    prompt = f"Du bist ein erfahrener SEO-Texter. Erstelle einen suchmaschinenoptimierten Title (max. 60 Zeichen) und eine Meta Description (max. 155 Zeichen) für eine {seitentyp}-Seite. Sprich die Nutzer mit Du/Dein an, fokussiere Dich auf Relevanz, Nutzen und klare Sprache. Der Titel soll am Ende folgenden Zusatz enthalten: | {marke}. Die Meta Description darf die Marke NICHT enthalten. Gib Deine Antwort bitte genau in folgendem Format zurück (keine zusätzlichen Erklärungen):\n\nTitle: ...\nMeta: ...\n\nEingaben:\n- Marke: {marke}\n- USP: {usps}\n- Branche: {branche}"
 
-                # Versuche sauber Titel & Meta zu extrahieren
-                title = ""
-                meta = ""
-                for line in raw_output.split("\n"):
-                    if line.lower().startswith("title:"):
-                        title = line.split(":", 1)[1].strip()
-                    elif line.lower().startswith("meta:"):
-                        meta = line.split(":", 1)[1].strip()
+if st.button("Snippet generieren"):
+    with st.spinner("GPT denkt nach..."):
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[
+                    {"role": "system", "content": "Du bist ein SEO-Experte."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            raw_output = response.choices[0].message.content.strip()
 
-                st.subheader("Vorschau Snippet")
-                st.markdown(f"**Title (max 60 Zeichen):**\n\n{title}")
-                st.markdown(f"**Meta Description (max 155 Zeichen):**\n\n{meta if meta else '— Keine Meta Description erkannt —'}")
-                st.caption(f"Titel: {len(title)} Zeichen | Meta: {len(meta)} Zeichen")
+            # Versuche sauber Titel & Meta zu extrahieren
+            title = ""
+            meta = ""
+            for line in raw_output.split("\n"):
+                if line.lower().startswith("title:"):
+                    title = line.split(":", 1)[1].strip()
+                elif line.lower().startswith("meta:"):
+                    meta = line.split(":", 1)[1].strip()
 
-                for ansicht, style in {"Desktop": "max-width:750px;", "Mobil": "max-width:600px;"}.items():
-                    st.markdown(f"#### Vorschau {ansicht}")
-                    st.markdown(f"""
-                    <div style='border:1px solid #ddd; padding:16px; border-radius:8px; margin-top:12px; {style} background:#fff;'>
-                        <p style='color:#202124; font-size:14px; margin-bottom:2px;'>
-                            <span style='color:green;'>{url_input}</span>
-                        </p>
-                        <p style='color:#1a0dab; font-size:18px; margin:0;'>
-                            {html.escape(title) if title else '<em>Kein Titel erkannt</em>'}
-                        </p>
-                        <p style='color:#4d5156; font-size:14px; margin-top:4px;'>
-                            {html.escape(meta) if meta else '<em>Keine Beschreibung erkannt</em>'}
-                        </p>
-                    </div>
-                    """, unsafe_allow_html=True)
+            st.subheader("Vorschau Snippet")
+            st.markdown(f"**Title (max 60 Zeichen):**\n\n{title}")
+            st.markdown(f"**Meta Description (max 155 Zeichen):**\n\n{meta if meta else '— Keine Meta Description erkannt —'}")
+            st.caption(f"Titel: {len(title)} Zeichen | Meta: {len(meta)} Zeichen")
 
-                st.code(title, language='text')
-                st.code(meta, language='text')
+            for ansicht, style in {"Desktop": "max-width:750px;", "Mobil": "max-width:600px;"}.items():
+                st.markdown(f"#### Vorschau {ansicht}")
+                st.markdown(f"""
+                <div style='border:1px solid #ddd; padding:16px; border-radius:8px; margin-top:12px; {style} background:#fff;'>
+                    <p style='color:#202124; font-size:14px; margin-bottom:2px;'>
+                        <span style='color:green;'>{url_input if url_input else 'www.beispielseite.de'}</span>
+                    </p>
+                    <p style='color:#1a0dab; font-size:18px; margin:0;'>
+                        {html.escape(title) if title else '<em>Kein Titel erkannt</em>'}
+                    </p>
+                    <p style='color:#4d5156; font-size:14px; margin-top:4px;'>
+                        {html.escape(meta) if meta else '<em>Keine Beschreibung erkannt</em>'}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
 
-            except Exception as e:
-                st.error(f"Fehler bei der OpenAI-Abfrage: {e}")
+            st.code(title, language='text')
+            st.code(meta, language='text')
+
+        except Exception as e:
+            st.error(f"Fehler bei der OpenAI-Abfrage: {e}")
